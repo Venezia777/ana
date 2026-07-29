@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meu Controle — Ana Carolina</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' } },
+        fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+      }}
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    .fade-in { animation: fadeIn 0.25s ease-in; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .card-hover { transition: all 0.2s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    input, select, textarea { color-scheme: dark; }
+    .toast { animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn { from { transform:translateX(400px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  </style>
+</head>
+<body class="dark bg-slate-950 text-slate-100 min-h-screen">
+
+<!-- LOGIN -->
+<div id="login-screen" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950">
+  <div class="w-full max-w-md p-8 bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600 mb-4">
+        <i data-lucide="layout-dashboard" class="w-8 h-8 text-white"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-white">Meu Controle</h1>
+      <p class="text-slate-400 mt-1">Seu sistema pessoal de gestão</p>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="text-sm text-slate-400 mb-1 block">Email</label>
+        <input id="login-email" type="email" placeholder="seu@email.com" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+      </div>
+      <div>
+        <label class="text-sm text-slate-400 mb-1 block">Senha</label>
+        <input id="login-password" type="password" placeholder="••••••••" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+      </div>
+      <button onclick="handleLogin()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors">Entrar</button>
+      <button onclick="handleSignUp()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-semibold transition-colors border border-slate-700">Criar conta</button>
+      <p id="login-error" class="text-red-400 text-sm text-center hidden"></p>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden flex min-h-screen">
+  <aside class="w-60 bg-slate-900 border-r border-slate-800 flex flex-col fixed h-full z-30">
+    <div class="p-5 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-white text-sm">Meu Controle</h1>
+          <p class="text-xs text-slate-500">Bob Jr</p>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <button onclick="showSection('dashboard')" data-section="dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="home" class="w-4 h-4"></i> Dashboard</button>
+      <button onclick="showSection('financiamentos')" data-section="financiamentos" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="landmark" class="w-4 h-4"></i> Financiamentos</button>
+      <button onclick="showSection('cartao')" data-section="cartao" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="credit-card" class="w-4 h-4"></i> Cartão de Crédito</button>
+      <button onclick="showSection('contas-fixas')" data-section="contas-fixas" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="receipt" class="w-4 h-4"></i> Contas Fixas</button>
+      <button onclick="showSection('ganhos')" data-section="ganhos" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="trending-up" class="w-4 h-4"></i> Ganhos do Mês</button>
+      <button onclick="showSection('carreira')" data-section="carreira" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="briefcase" class="w-4 h-4"></i> Carreira</button>
+      <button onclick="showSection('faculdade')" data-section="faculdade" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="graduation-cap" class="w-4 h-4"></i> Faculdade</button>
+      <button onclick="showSection('tarefas')" data-section="tarefas" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="check-square" class="w-4 h-4"></i> Tarefas</button>
+      <button onclick="showSection('renda')" data-section="renda" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="dollar-sign" class="w-4 h-4"></i> Renda Extra</button>
+      <button onclick="showSection('reformas')" data-section="reformas" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors text-sm"><i data-lucide="hammer" class="w-4 h-4"></i> Reformas/Projetos</button>
+    </nav>
+    <div class="p-3 border-t border-slate-800">
+      <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors text-sm"><i data-lucide="log-out" class="w-4 h-4"></i> Sair</button>
+    </div>
+  </aside>
+
+  <main class="flex-1 ml-60 p-6 overflow-y-auto">
+
+    <!-- DASHBOARD -->
+    <section id="section-dashboard" class="space-y-5">
+      <div class="flex items-center justify-between">
+        <div><h2 class="text-2xl font-bold text-white">Dashboard</h2><p class="text-slate-400 text-sm mt-0.5">Visão geral do seu controle pessoal</p></div>
+        <p id="today-date" class="text-slate-400 text-sm"></p>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="card-hover bg-slate-900 border border-slate-800 rounded-xl p-4"><div class="flex items-center justify-between"><div><p class="text-xs text-slate-400">Financiamentos Ativos</p><p id="stat-financiamentos" class="text-2xl font-bold text-white mt-1">—</p></div><div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center"><i data-lucide="landmark" class="w-5 h-5 text-amber-500"></i></div></div><p id="stat-financiamentos-sub" class="text-xs text-slate-500 mt-2"></p></div>
+        <div class="card-hover bg-slate-900 border border-slate-800 rounded-xl p-4"><div class="flex items-center justify-between"><div><p class="text-xs text-slate-400">Projetos Carreira</p><p id="stat-carreira" class="text-2xl font-bold text-white mt-1">—</p></div><div class="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center"><i data-lucide="briefcase" class="w-5 h-5 text-brand-500"></i></div></div><p id="stat-carreira-sub" class="text-xs text-slate-500 mt-2"></p></div>
+        <div class="card-hover bg-slate-900 border border-slate-800 rounded-xl p-4"><div class="flex items-center justify-between"><div><p class="text-xs text-slate-400">Faculdade Pendente</p><p id="stat-faculdade" class="text-2xl font-bold text-white mt-1">—</p></div><div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center"><i data-lucide="graduation-cap" class="w-5 h-5 text-purple-500"></i></div></div><p id="stat-faculdade-sub" class="text-xs text-slate-500 mt-2"></p></div>
+        <div class="card-hover bg-slate-900 border border-slate-800 rounded-xl p-4"><div class="flex items-center justify-between"><div><p class="text-xs text-slate-400">Renda Extra (mês)</p><p id="stat-renda" class="text-2xl font-bold text-white mt-1">—</p></div><div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center"><i data-lucide="dollar-sign" class="w-5 h-5 text-emerald-500"></i></div></div><p id="stat-renda-sub" class="text-xs text-slate-500 mt-2"></p></div>
+      </div>
+      <!-- Resumo financeiro -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><div class="flex items-center gap-2 mb-2"><i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i><h3 class="text-xs text-slate-400">Ganhos do Mês</h3></div><p id="stat-ganhos-mes" class="text-xl font-bold text-emerald-500">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><div class="flex items-center gap-2 mb-2"><i data-lucide="receipt" class="w-4 h-4 text-red-400"></i><h3 class="text-xs text-slate-400">Contas Fixas do Mês</h3></div><p id="stat-contas-mes" class="text-xl font-bold text-red-400">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><div class="flex items-center gap-2 mb-2"><i data-lucide="credit-card" class="w-4 h-4 text-amber-500"></i><h3 class="text-xs text-slate-400">Cartão (parcelas do mês)</h3></div><p id="stat-cartao-mes" class="text-xl font-bold text-amber-500">—</p></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><h3 class="font-semibold text-white text-sm mb-3">Renda Extra por Mês</h3><div style="height:160px"><canvas id="chart-renda"></canvas></div></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><h3 class="font-semibold text-white text-sm mb-3">Status das Tarefas</h3><div style="height:160px"><canvas id="chart-tarefas"></canvas></div></div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><h3 class="font-semibold text-white text-sm mb-3">Tarefas Pendentes</h3><div id="recent-tasks" class="space-y-2"><p class="text-slate-500 text-sm">Carregando…</p></div></div>
+      <!-- Projeção futura -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="calendar-range" class="w-4 h-4 text-brand-500"></i>
+          <h3 class="font-semibold text-white text-sm">Projeção dos Próximos Meses</h3>
+        </div>
+        <div id="projecao-meses" class="space-y-3"><p class="text-slate-500 text-sm">Carregando…</p></div>
+      </div>
+    </section>
+
+    <!-- FINANCIAMENTOS -->
+    <section id="section-financiamentos" class="hidden space-y-5">
+      <div class="flex items-center justify-between"><div><h2 class="text-2xl font-bold text-white">Financiamentos</h2><p class="text-slate-400 text-sm mt-0.5">Acompanhe seus financiamentos e parcelas</p></div><button onclick="openModal('financiamento')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Novo</button></div>
+      <div id="list-financiamentos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- CARTÃO DE CRÉDITO -->
+    <section id="section-cartao" class="hidden space-y-5">
+      <div class="flex items-center justify-between">
+        <div><h2 class="text-2xl font-bold text-white">Cartão de Crédito</h2><p class="text-slate-400 text-sm mt-0.5">Compras parceladas e despesas do mês</p></div>
+        <button onclick="openModal('cartao')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Nova Compra</button>
+      </div>
+      <!-- Resumo cartão -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Despesa do mês</p><p id="cartao-despesa-mes" class="text-xl font-bold text-amber-500 mt-1">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Parcelas ativas</p><p id="cartao-parcelas-ativas" class="text-xl font-bold text-white mt-1">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Falta quitar</p><p id="cartao-falta" class="text-xl font-bold text-red-400 mt-1">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Compras à vista</p><p id="cartao-avista" class="text-xl font-bold text-white mt-1">—</p></div>
+      </div>
+      <div id="list-cartao" class="space-y-3"></div>
+    </section>
+
+    <!-- CONTAS FIXAS -->
+    <section id="section-contas-fixas" class="hidden space-y-5">
+      <div class="flex items-center justify-between">
+        <div><h2 class="text-2xl font-bold text-white">Contas Fixas</h2><p class="text-slate-400 text-sm mt-0.5">Contas mensais recorrentes</p></div>
+        <button onclick="openModal('conta_fixa')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Nova Conta</button>
+      </div>
+      <!-- Resumo mês atual -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Total do mês</p><p id="contas-total" class="text-xl font-bold text-white mt-1">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Pagas</p><p id="contas-pagas" class="text-xl font-bold text-emerald-500 mt-1">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Pendentes</p><p id="contas-pendentes" class="text-xl font-bold text-amber-500 mt-1">—</p></div>
+      </div>
+      <!-- Abas de meses -->
+      <div class="flex gap-2" id="contas-tabs"></div>
+      <!-- Lista por mês -->
+      <div id="list-contas-fixas" class="space-y-2"></div>
+    </section>
+
+    <!-- GANHOS DO MÊS -->
+    <section id="section-ganhos" class="hidden space-y-5">
+      <div class="flex items-center justify-between">
+        <div><h2 class="text-2xl font-bold text-white">Ganhos do Mês</h2><p class="text-slate-400 text-sm mt-0.5">Renda real e previsão dos próximos meses</p></div>
+        <button onclick="openModal('ganho')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Novo Ganho</button>
+      </div>
+      <!-- Resumo ganhos -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Total do mês</p><p id="ganhos-total" class="text-xl font-bold text-emerald-500 mt-1">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Recorrentes</p><p id="ganhos-recorrentes" class="text-xl font-bold text-white mt-1">—</p></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4"><p class="text-xs text-slate-400">Eventuais</p><p id="ganhos-eventuais" class="text-xl font-bold text-white mt-1">—</p></div>
+      </div>
+      <!-- Abas de meses -->
+      <div class="flex gap-2 flex-wrap" id="ganhos-tabs"></div>
+      <div id="list-ganhos" class="space-y-2"></div>
+    </section>
+
+    <!-- CARREIRA -->
+    <section id="section-carreira" class="hidden space-y-5">
+      <div class="flex items-center justify-between"><div><h2 class="text-2xl font-bold text-white">Projetos de Carreira</h2><p class="text-slate-400 text-sm mt-0.5">Seus projetos e metas profissionais</p></div><button onclick="openModal('carreira')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Novo</button></div>
+      <div id="list-carreira" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- FACULDADE -->
+    <section id="section-faculdade" class="hidden space-y-5">
+      <div class="flex items-center justify-between"><div><h2 class="text-2xl font-bold text-white">Faculdade</h2><p class="text-slate-400 text-sm mt-0.5">Tarefas, trabalhos e provas</p></div><button onclick="openModal('faculdade')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Novo</button></div>
+      <div id="list-faculdade" class="space-y-2"></div>
+    </section>
+
+    <!-- TAREFAS -->
+    <section id="section-tarefas" class="hidden space-y-5">
+      <div class="flex items-center justify-between"><div><h2 class="text-2xl font-bold text-white">Tarefas Gerais</h2><p class="text-slate-400 text-sm mt-0.5">Tudo que você precisa fazer</p></div><button onclick="openModal('tarefa')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Nova</button></div>
+      <div id="list-tarefas" class="space-y-2"></div>
+    </section>
+
+    <!-- RENDA -->
+    <section id="section-renda" class="hidden space-y-5">
+      <div class="flex items-center justify-between"><div><h2 class="text-2xl font-bold text-white">Renda Extra</h2><p class="text-slate-400 text-sm mt-0.5">Suas fontes de renda adicional</p></div><button onclick="openModal('renda')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Novo</button></div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><div class="lg:col-span-2 space-y-2" id="list-renda"></div><div class="bg-slate-900 border border-slate-800 rounded-xl p-5 h-fit"><h3 class="font-semibold text-white text-sm mb-3">Resumo</h3><p id="renda-total-mes" class="text-2xl font-bold text-emerald-500">—</p><p class="text-slate-400 text-xs mt-1">Total este mês</p><hr class="border-slate-800 my-3"><p id="renda-total-ano" class="text-xl font-bold text-white">—</p><p class="text-slate-400 text-xs mt-1">Total no ano</p></div></div>
+    </section>
+
+    <!-- REFORMAS -->
+    <section id="section-reformas" class="hidden space-y-5">
+      <div class="flex items-center justify-between"><div><h2 class="text-2xl font-bold text-white">Reformas & Projetos</h2><p class="text-slate-400 text-sm mt-0.5">Obras, reformas e projetos pessoais</p></div><button onclick="openModal('reforma')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"><i data-lucide="plus" class="w-4 h-4"></i> Novo</button></div>
+      <div id="list-reformas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onclick="closeModal(event)">
+  <div class="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-5"><h3 id="modal-title" class="text-lg font-bold text-white">Novo item</h3><button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <form id="modal-form" onsubmit="handleSubmit(event)" class="space-y-4">
+      <input type="hidden" id="form-id" /><input type="hidden" id="form-type" />
+      <div id="modal-fields"></div>
+      <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors">Salvar</button>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container" class="fixed top-4 right-4 z-[60] space-y-2"></div>
+
+<script>
+  const SUPABASE_URL = 'https://wjacodadzxhmsrngisqm.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndqYWNvZGFkenhobXNybmdpc3FtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMzk0NzQsImV4cCI6MjEwMDkxNTQ3NH0.NjkyTyAi6FuhJgkBGIhUBohWhWTKMLX6ld2AolyOKu0';
+  let sb = null, currentUser = null, charts = {};
+
+  async function init() {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) { currentUser = session.user; showApp(); }
+    else { document.getElementById('login-screen').classList.remove('hidden'); }
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) { currentUser = session.user; showApp(); }
+      else if (event === 'SIGNED_OUT') { currentUser = null; document.getElementById('app').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden'); }
+    });
+    lucide.createIcons();
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('login-email').value, password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error'); errEl.classList.add('hidden');
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { errEl.textContent = error.message; errEl.classList.remove('hidden'); }
+  }
+  async function handleSignUp() {
+    const email = document.getElementById('login-email').value, password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error'); errEl.classList.add('hidden');
+    const { error } = await sb.auth.signUp({ email, password });
+    if (error) { errEl.textContent = error.message; errEl.classList.remove('hidden'); }
+    else showToast('Conta criada! Verifique seu email.', 'success');
+  }
+  async function handleLogout() { await sb.auth.signOut(); }
+  function showApp() { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); lucide.createIcons(); showSection('dashboard'); loadAllData(); }
+
+  function showSection(section) {
+    document.querySelectorAll('section[id^="section-"]').forEach(s => s.classList.add('hidden'));
+    document.getElementById('section-' + section).classList.remove('hidden');
+    document.getElementById('section-' + section).classList.add('fade-in');
+    document.querySelectorAll('.nav-btn').forEach(btn => { btn.classList.toggle('bg-slate-800', btn.dataset.section === section); btn.classList.toggle('text-white', btn.dataset.section === section); });
+    loadSection(section);
+  }
+
+  function loadSection(section) {
+    if (section === 'dashboard') { loadAllData(); return; }
+    const loaders = { financiamentos:loadFinanciamentos, cartao:loadCartao, 'contas-fixas':loadContasFixas, ganhos:loadGanhos, carreira:loadCarreira, faculdade:loadFaculdade, tarefas:loadTarefas, renda:loadRenda, reformas:loadReformas };
+    if (loaders[section]) loaders[section]();
+  }
+
+  function currentSection() { const a=document.querySelector('section[id^="section-"]:not(.hidden)'); return a?a.id.replace('section-',''):'dashboard'; }
+
+  async function loadAllData() {
+    await Promise.all([loadFinanciamentos(), loadCartao(), loadContasFixas(), loadGanhos(), loadCarreira(), loadFaculdade(), loadTarefas(), loadRenda(), loadReformas()]);
+    updateDashboard();
+  }
+
+  // ============================================================
+  // LOADERS
+  // ============================================================
+  async function loadFinanciamentos() { const{data}=await sb.from('financiamentos').select('*').order('created_at',{ascending:false}); renderFinanciamentos(data||[]); }
+  async function loadCarreira() { const{data}=await sb.from('projetos_carreira').select('*').order('created_at',{ascending:false}); renderCarreira(data||[]); }
+  async function loadFaculdade() { const{data}=await sb.from('faculdade').select('*').order('created_at',{ascending:false}); renderFaculdade(data||[]); }
+  async function loadTarefas() { const{data}=await sb.from('tarefas').select('*').order('created_at',{ascending:false}); renderTarefas(data||[]); }
+  async function loadRenda() { const{data}=await sb.from('renda_extra').select('*').order('data',{ascending:false}); renderRenda(data||[]); }
+  async function loadReformas() { const{data}=await sb.from('reformas_projetos').select('*').order('created_at',{ascending:false}); renderReformas(data||[]); }
+  async function loadCartao() { const{data}=await sb.from('compras_cartao').select('*').order('data_compra',{ascending:false}); renderCartao(data||[]); }
+  let contasAllData = [];
+  let contasMesAtivo = '';
+
+  async function loadContasFixas() {
+    const now = new Date();
+    // Busca mês atual + próximos 2
+    const meses = [0,1,2].map(i => {
+      const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    });
+    const mesAtual = meses[0];
+    if(!contasMesAtivo) contasMesAtivo = mesAtual;
+    // Busca todos os registros dos 3 meses de uma vez
+    const {data} = await sb.from('contas_fixas').select('*')
+      .in('mes_referencia', meses)
+      .order('dia_vencimento', {ascending:true});
+    contasAllData = data || [];
+    renderContasTabs(meses, mesAtual);
+    renderContasFixas(contasAllData.filter(c => c.mes_referencia === contasMesAtivo), contasMesAtivo, mesAtual);
+  }
+
+  function renderContasTabs(meses, mesAtual) {
+    const tabsEl = document.getElementById('contas-tabs');
+    const nomes = meses.map(m => {
+      const [y,mo] = m.split('-');
+      return new Date(y, parseInt(mo)-1, 1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    });
+    tabsEl.innerHTML = meses.map((m,i) => {
+      const isAtivo = m === contasMesAtivo;
+      const isFuturo = m > mesAtual;
+      return `<button onclick="switchContasMes('${m}')" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isAtivo ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}">
+        ${nomes[i]}${isFuturo ? ' <span class="text-xs opacity-70">(projeção)</span>' : ''}
+      </button>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  function switchContasMes(mes) {
+    const now = new Date();
+    const mesAtual = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    const meses = [0,1,2].map(i => {
+      const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    });
+    contasMesAtivo = mes;
+    renderContasTabs(meses, mesAtual);
+    renderContasFixas(contasAllData.filter(c => c.mes_referencia === mes), mes, mesAtual);
+  }
+  let ganhosAllData = [];
+  let ganhosMesAtivo = '';
+
+  async function loadGanhos() {
+    const now = new Date();
+    const meses = [0,1,2,3].map(i => {
+      const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    });
+    const mesAtual = meses[0];
+    if (!ganhosMesAtivo) ganhosMesAtivo = mesAtual;
+    // Busca todos os 4 meses de uma vez
+    const inicio = meses[0]+'-01';
+    const fim = meses[3]+'-31';
+    const {data} = await sb.from('ganhos_mes').select('*')
+      .gte('data', inicio).lte('data', fim)
+      .order('data', {ascending:false});
+    ganhosAllData = data || [];
+    renderGanhosTabs(meses, mesAtual);
+    renderGanhos(ganhosAllData.filter(g => g.data && g.data.startsWith(ganhosMesAtivo)), ganhosMesAtivo, mesAtual);
+  }
+
+  function renderGanhosTabs(meses, mesAtual) {
+    const tabsEl = document.getElementById('ganhos-tabs');
+    if (!tabsEl) return;
+    tabsEl.innerHTML = meses.map((m,i) => {
+      const [y,mo] = m.split('-');
+      const nome = new Date(y, parseInt(mo)-1, 1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+      const isFuturo = m > mesAtual;
+      const isAtivo = m === ganhosMesAtivo;
+      // calcular total desse mês já cadastrado
+      const total = ganhosAllData.filter(g => g.data && g.data.startsWith(m)).reduce((s,g)=>s+(g.valor||0),0);
+      return `<button onclick="switchGanhosMes('${m}')" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${isAtivo ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}">
+        ${nome}
+        ${isFuturo ? '<span class="text-xs opacity-60">(prev.)</span>' : ''}
+        ${total > 0 ? `<span class="text-xs px-1.5 py-0.5 rounded-full ${isAtivo?'bg-white/20':'bg-emerald-500/20 text-emerald-400'}">R$ ${fmt(total)}</span>` : ''}
+      </button>`;
+    }).join('');
+  }
+
+  function switchGanhosMes(mes) {
+    const now = new Date();
+    const mesAtual = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    const meses = [0,1,2,3].map(i => {
+      const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    });
+    ganhosMesAtivo = mes;
+    renderGanhosTabs(meses, mesAtual);
+    renderGanhos(ganhosAllData.filter(g => g.data && g.data.startsWith(mes)), mes, mesAtual);
+  }
+
+  // ============================================================
+  // RENDERERS
+  // ============================================================
+  function emptyState(icon,msg){return `<div class="col-span-full text-center py-10 text-slate-500"><i data-lucide="${icon}" class="w-10 h-10 mx-auto mb-2 opacity-30"></i><p class="text-sm">${msg}</p></div>`;}
+
+  function renderFinanciamentos(items) {
+    const c=document.getElementById('list-financiamentos');
+    if(!items.length){c.innerHTML=emptyState('landmark','Nenhum financiamento cadastrado');lucide.createIcons();return;}
+    const sc={quitado:'emerald',atrasado:'red',ativo:'amber'};
+    c.innerHTML=items.map(f=>{
+      const pct=f.parcelas_totais?Math.round((f.parcelas_pagas/f.parcelas_totais)*100):0;
+      const restantes = (f.parcelas_totais||0) - (f.parcelas_pagas||0);
+      const valorPago = (f.parcelas_pagas||0) * (f.valor_parcela||0);
+      const valorRestante = restantes * (f.valor_parcela||0);
+      // Data de quitação: hoje + restantes meses
+      const dataQuit = new Date();
+      dataQuit.setMonth(dataQuit.getMonth() + restantes);
+      const dataQuitStr = restantes > 0 ? dataQuit.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}) : '—';
+      const sc2=sc[f.status]||'amber';
+      return `<div class="card-hover bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-start justify-between mb-3">
+          <h3 class="font-semibold text-white text-sm">${esc(f.nome)}</h3>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-${sc2}-500/10 text-${sc2}-400">${esc(f.status)}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
+          <div class="flex justify-between col-span-2 pb-1 border-b border-slate-800">
+            <span class="text-slate-400">Valor total</span>
+            <span class="text-white font-semibold">R$ ${fmt(f.valor_total)}</span>
+          </div>
+          <div class="flex justify-between"><span class="text-slate-400">Parcela</span><span class="text-white font-medium">R$ ${fmt(f.valor_parcela)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Parcelas</span><span class="text-white font-medium">${f.parcelas_pagas||0}/${f.parcelas_totais||0}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Já pago</span><span class="text-emerald-400 font-medium">R$ ${fmt(valorPago)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Falta pagar</span><span class="text-red-400 font-medium">R$ ${fmt(valorRestante)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Parcelas restantes</span><span class="text-amber-400 font-medium">${restantes}x</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Quita em</span><span class="text-white font-medium">${dataQuitStr}</span></div>
+        </div>
+        <div class="mb-1">
+          <div class="flex justify-between text-xs mb-1"><span class="text-slate-500">${pct}% quitado</span><span class="text-slate-500">${100-pct}% restante</span></div>
+          <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div class="h-2 rounded-full transition-all" style="width:${pct}%;background:linear-gradient(90deg,#4f46e5,#818cf8)"></div>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-3">
+          <button onclick="openModal('financiamento','${f.id}')" class="flex-1 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button>
+          <button onclick="deleteItem('financiamentos','${f.id}')" class="px-3 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg">Excluir</button>
+        </div>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  function renderCarreira(items) {
+    const c=document.getElementById('list-carreira');
+    if(!items.length){c.innerHTML=emptyState('briefcase','Nenhum projeto cadastrado');lucide.createIcons();return;}
+    const sm={planejado:'slate',em_andamento:'brand',concluido:'emerald',pausado:'amber'},pm={baixa:'slate',media:'amber',alta:'red'};
+    c.innerHTML=items.map(p=>`<div class="card-hover bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <div class="flex items-start justify-between mb-1"><h3 class="font-semibold text-white text-sm">${esc(p.nome)}</h3><span class="text-xs px-2 py-0.5 rounded-full bg-${sm[p.status]||'slate'}-500/10 text-${sm[p.status]||'slate'}-400">${(p.status||'').replace('_',' ')}</span></div>
+      <p class="text-xs text-slate-400 mb-2">${esc(p.descricao)||'Sem descrição'}</p>
+      <div class="flex items-center gap-2 mb-2 flex-wrap"><span class="text-xs px-2 py-0.5 rounded-full bg-${pm[p.prioridade]||'slate'}-500/10 text-${pm[p.prioridade]||'slate'}-400">Prio: ${esc(p.prioridade)}</span>${p.prazo?`<span class="text-xs text-slate-500">${fmtDate(p.prazo)}</span>`:''}</div>
+      <div class="mb-2"><div class="flex justify-between text-xs text-slate-400 mb-1"><span>Progresso</span><span>${p.progresso||0}%</span></div><div class="w-full bg-slate-800 rounded-full h-1.5"><div class="bg-brand-600 h-1.5 rounded-full" style="width:${p.progresso||0}%"></div></div></div>
+      <div class="flex gap-2"><button onclick="openModal('carreira','${p.id}')" class="flex-1 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button><button onclick="deleteItem('projetos_carreira','${p.id}')" class="px-3 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg">Excluir</button></div>
+    </div>`).join('');
+    lucide.createIcons();
+  }
+
+  function renderFaculdade(items) {
+    const c=document.getElementById('list-faculdade');
+    if(!items.length){c.innerHTML=emptyState('graduation-cap','Nenhuma tarefa cadastrada');lucide.createIcons();return;}
+    const sm={pendente:'amber',em_andamento:'brand',concluido:'emerald'};
+    c.innerHTML=items.map(f=>`<div class="card-hover flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3">
+      <button onclick="toggleStatus('faculdade','${f.id}','${f.status}')" class="w-5 h-5 rounded-full border-2 ${f.status==='concluido'?'bg-emerald-500 border-emerald-500':'border-slate-600 hover:border-brand-500'} flex items-center justify-center shrink-0">${f.status==='concluido'?'<i data-lucide="check" class="w-3 h-3 text-white"></i>':''}</button>
+      <div class="flex-1 min-w-0"><div class="flex items-center gap-2 flex-wrap"><span class="text-sm font-medium ${f.status==='concluido'?'line-through text-slate-500':'text-white'}">${esc(f.tarefa)}</span><span class="text-xs px-2 py-0.5 rounded-full bg-${sm[f.status]||'slate'}-500/10 text-${sm[f.status]||'slate'}-400">${(f.status||'').replace('_',' ')}</span></div>
+      <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5"><span>${esc(f.materia)}</span>${f.prazo?`<span>• ${fmtDate(f.prazo)}</span>`:''}${f.nota!=null?`<span>• Nota: ${f.nota}</span>`:''}</div></div>
+      <div class="flex gap-1.5 shrink-0"><button onclick="openModal('faculdade','${f.id}')" class="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button><button onclick="deleteItem('faculdade','${f.id}')" class="px-2 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>
+    </div>`).join('');
+    lucide.createIcons();
+  }
+
+  function renderTarefas(items) {
+    const c=document.getElementById('list-tarefas');
+    if(!items.length){c.innerHTML=emptyState('check-square','Nenhuma tarefa cadastrada');lucide.createIcons();return;}
+    const sm={pendente:'amber',em_andamento:'brand',concluido:'emerald'},pm={baixa:'slate',media:'amber',alta:'red'};
+    c.innerHTML=items.map(t=>`<div class="card-hover flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3">
+      <button onclick="toggleStatus('tarefas','${t.id}','${t.status}')" class="w-5 h-5 rounded-full border-2 ${t.status==='concluido'?'bg-emerald-500 border-emerald-500':'border-slate-600 hover:border-brand-500'} flex items-center justify-center shrink-0">${t.status==='concluido'?'<i data-lucide="check" class="w-3 h-3 text-white"></i>':''}</button>
+      <div class="flex-1 min-w-0"><div class="flex items-center gap-2 flex-wrap"><span class="text-sm font-medium ${t.status==='concluido'?'line-through text-slate-500':'text-white'}">${esc(t.titulo)}</span>${t.categoria?`<span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">${esc(t.categoria)}</span>`:''}<span class="text-xs px-2 py-0.5 rounded-full bg-${pm[t.prioridade]||'slate'}-500/10 text-${pm[t.prioridade]||'slate'}-400">${esc(t.prioridade)}</span><span class="text-xs px-2 py-0.5 rounded-full bg-${sm[t.status]||'slate'}-500/10 text-${sm[t.status]||'slate'}-400">${(t.status||'').replace('_',' ')}</span></div>
+      ${t.prazo?`<p class="text-xs text-slate-500 mt-0.5">Prazo: ${fmtDate(t.prazo)}</p>`:''}</div>
+      <div class="flex gap-1.5 shrink-0"><button onclick="openModal('tarefa','${t.id}')" class="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button><button onclick="deleteItem('tarefas','${t.id}')" class="px-2 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>
+    </div>`).join('');
+    lucide.createIcons();
+  }
+
+  function renderRenda(items) {
+    const c=document.getElementById('list-renda');
+    if(!items.length){c.innerHTML=emptyState('dollar-sign','Nenhuma renda cadastrada');lucide.createIcons();return;}
+    const now=new Date();let totalMes=0,totalAno=0;
+    items.forEach(r=>{const d=new Date(r.data||r.created_at);if(d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear())totalMes+=r.valor||0;if(d.getFullYear()===now.getFullYear())totalAno+=r.valor||0;});
+    c.innerHTML=items.map(r=>`<div class="card-hover flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3">
+      <div class="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0"><i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-500"></i></div>
+      <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="text-sm font-medium text-white">${esc(r.fonte)}</span><span class="text-sm font-bold text-emerald-500">R$ ${fmt(r.valor)}</span></div><div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5"><span>${fmtDate(r.data)}</span>${r.descricao?`<span>• ${esc(r.descricao)}</span>`:''}</div></div>
+      <div class="flex gap-1.5 shrink-0"><button onclick="openModal('renda','${r.id}')" class="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button><button onclick="deleteItem('renda_extra','${r.id}')" class="px-2 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>
+    </div>`).join('');
+    document.getElementById('renda-total-mes').textContent='R$ '+fmt(totalMes);
+    document.getElementById('renda-total-ano').textContent='R$ '+fmt(totalAno);
+    lucide.createIcons();
+  }
+
+  function renderReformas(items) {
+    const c=document.getElementById('list-reformas');
+    if(!items.length){c.innerHTML=emptyState('hammer','Nenhum projeto cadastrado');lucide.createIcons();return;}
+    const sm={planejado:'slate',em_andamento:'brand',concluido:'emerald',pausado:'amber'};
+    c.innerHTML=items.map(r=>{
+      const pct=r.orcamento_total?Math.round(((r.gasto_atual||0)/r.orcamento_total)*100):0;
+      return `<div class="card-hover bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-start justify-between mb-1"><h3 class="font-semibold text-white text-sm">${esc(r.nome)}</h3><span class="text-xs px-2 py-0.5 rounded-full bg-${sm[r.status]||'slate'}-500/10 text-${sm[r.status]||'slate'}-400">${(r.status||'').replace('_',' ')}</span></div>
+        <p class="text-xs text-slate-400 mb-2">${esc(r.descricao)||'Sem descrição'}</p>
+        <div class="space-y-0.5 text-xs mb-2">
+          ${r.orcamento_total?`<div class="flex justify-between"><span class="text-slate-400">Orçamento:</span><span class="text-white font-medium">R$ ${fmt(r.orcamento_total)}</span></div>`:''}
+          ${r.gasto_atual?`<div class="flex justify-between"><span class="text-slate-400">Gasto atual:</span><span class="text-white font-medium">R$ ${fmt(r.gasto_atual)}</span></div>`:''}
+          ${r.prazo?`<div class="flex justify-between"><span class="text-slate-400">Prazo:</span><span class="text-white font-medium">${fmtDate(r.prazo)}</span></div>`:''}
+        </div>
+        ${r.orcamento_total?`<div class="w-full bg-slate-800 rounded-full h-1.5 mb-3"><div class="bg-amber-500 h-1.5 rounded-full" style="width:${Math.min(pct,100)}%"></div></div>`:''}
+        <div class="flex gap-2"><button onclick="openModal('reforma','${r.id}')" class="flex-1 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button><button onclick="deleteItem('reformas_projetos','${r.id}')" class="px-3 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg">Excluir</button></div>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  // ============================================================
+  // RENDERER: CARTÃO DE CRÉDITO
+  // ============================================================
+  function renderCartao(items) {
+    const c = document.getElementById('list-cartao');
+    if (!items.length) {
+      c.innerHTML = emptyState('credit-card', 'Nenhuma compra cadastrada');
+      updateCartaoResumo([]);
+      lucide.createIcons();
+      return;
+    }
+    // Agrupar por cartão
+    const cartoes = {};
+    items.forEach(i => { (cartoes[i.cartao] = cartoes[i.cartao] || []).push(i); });
+
+    let despesaMes = 0, parcelasAtivas = 0, faltaQuitar = 0, totalAvista = 0;
+    const now = new Date();
+
+    c.innerHTML = Object.keys(cartoes).map(nomeCartao => {
+      const compras = cartoes[nomeCartao];
+      let totalMesCartao = 0;
+      const comprasHtml = compras.map(comp => {
+        if (comp.tipo === 'avista') {
+          totalAvista += comp.valor_total || 0;
+          totalMesCartao += comp.valor_total || 0;
+          return `<div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+            <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center shrink-0"><i data-lucide="shopping-bag" class="w-4 h-4 text-slate-400"></i></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2"><span class="text-sm font-medium text-white">${esc(comp.descricao)}</span><span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">À vista</span></div>
+              <p class="text-xs text-slate-500 mt-0.5">${comp.categoria?esc(comp.categoria)+' • ':''}${fmtDate(comp.data_compra)}</p>
+            </div>
+            <span class="text-sm font-bold text-white">R$ ${fmt(comp.valor_total)}</span>
+            <div class="flex gap-1 shrink-0"><button onclick="openModal('cartao','${comp.id}')" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded">Editar</button><button onclick="deleteItem('compras_cartao','${comp.id}')" class="px-1.5 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>
+          </div>`;
+        }
+        // Parcelado
+        const restantes = comp.parcelas_totais - comp.parcelas_pagas;
+        const faltaValor = restantes * (comp.valor_parcela || 0);
+        // Data final: data_compra + parcelas_totais meses
+        const dataFinal = new Date(comp.data_compra);
+        dataFinal.setMonth(dataFinal.getMonth() + comp.parcelas_totais);
+        const pct = comp.parcelas_totais ? Math.round((comp.parcelas_pagas / comp.parcelas_totais) * 100) : 0;
+        if (restantes > 0) { parcelasAtivas++; faltaQuitar += faltaValor; despesaMes += (comp.valor_parcela || 0); totalMesCartao += (comp.valor_parcela || 0); }
+        return `<div class="p-3 bg-slate-800/50 rounded-lg">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0"><i data-lucide="repeat" class="w-4 h-4 text-amber-500"></i></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap"><span class="text-sm font-medium text-white">${esc(comp.descricao)}</span><span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">${comp.parcelas_pagas||0}/${comp.parcelas_totais||1}x</span>${comp.categoria?`<span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">${esc(comp.categoria)}</span>`:''}</div>
+              <p class="text-xs text-slate-500 mt-0.5">R$ ${fmt(comp.valor_parcela)}/parcela • Compra: ${fmtDate(comp.data_compra)}</p>
+            </div>
+            <div class="flex gap-1 shrink-0"><button onclick="openModal('cartao','${comp.id}')" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded">Editar</button><button onclick="deleteItem('compras_cartao','${comp.id}')" class="px-1.5 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>
+          </div>
+          <div class="ml-11 space-y-1">
+            <div class="w-full bg-slate-800 rounded-full h-1.5"><div class="bg-amber-500 h-1.5 rounded-full" style="width:${pct}%"></div></div>
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-400">Faltam: <span class="text-amber-400 font-medium">${restantes}x de R$ ${fmt(comp.valor_parcela)}</span></span>
+              <span class="text-slate-400">Termina: <span class="text-white font-medium">${fmtDate2(dataFinal)}</span></span>
+            </div>
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-400">Valor restante: <span class="text-red-400 font-medium">R$ ${fmt(faltaValor)}</span></span>
+              <span class="text-slate-400">Total: <span class="text-white font-medium">R$ ${fmt(comp.valor_total)}</span></span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2"><i data-lucide="credit-card" class="w-5 h-5 text-brand-500"></i><h3 class="font-semibold text-white text-sm">${esc(nomeCartao)}</h3></div>
+          <span class="text-xs text-slate-400">Despesa do mês: <span class="text-amber-400 font-bold">R$ ${fmt(totalMesCartao)}</span></span>
+        </div>
+        <div class="space-y-2">${comprasHtml}</div>
+      </div>`;
+    }).join('');
+
+    updateCartaoResumo(items, despesaMes, parcelasAtivas, faltaQuitar, totalAvista);
+    lucide.createIcons();
+  }
+
+  function updateCartaoResumo(items, despesaMes, parcelasAtivas, faltaQuitar, totalAvista) {
+    document.getElementById('cartao-despesa-mes').textContent = 'R$ ' + fmt(despesaMes || 0);
+    document.getElementById('cartao-parcelas-ativas').textContent = parcelasAtivas || 0;
+    document.getElementById('cartao-falta').textContent = 'R$ ' + fmt(faltaQuitar || 0);
+    document.getElementById('cartao-avista').textContent = 'R$ ' + fmt(totalAvista || 0);
+  }
+
+  // ============================================================
+  // RENDERER: CONTAS FIXAS
+  // ============================================================
+  function renderContasFixas(items, mesAtivo, mesAtual) {
+    const c = document.getElementById('list-contas-fixas');
+    let total=0, pagas=0, pendentes=0;
+    items.forEach(i => { total += i.valor||0; if(i.status==='pago') pagas+=i.valor||0; else pendentes+=i.valor||0; });
+    document.getElementById('contas-total').textContent = 'R$ ' + fmt(total);
+    document.getElementById('contas-pagas').textContent = 'R$ ' + fmt(pagas);
+    document.getElementById('contas-pendentes').textContent = 'R$ ' + fmt(pendentes);
+
+    const isFuturo = mesAtivo > mesAtual;
+    const now = new Date(), diaHoje = now.getDate();
+
+    if (!items.length) {
+      const [y,m] = mesAtivo.split('-');
+      const nomeMes = new Date(y, parseInt(m)-1, 1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+      c.innerHTML = `<div class="text-center py-10 text-slate-500">
+        <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto mb-3"><i data-lucide="receipt" class="w-6 h-6 opacity-30"></i></div>
+        <p class="text-sm">Nenhuma conta cadastrada para ${nomeMes}</p>
+        ${isFuturo ? `<p class="text-xs text-slate-600 mt-1">Adicione contas futuras para planejar seus gastos</p>` : ''}
+      </div>`;
+      lucide.createIcons();
+      return;
+    }
+
+    c.innerHTML = items.map(conta => {
+      const atrasada = !isFuturo && conta.status==='pendente' && conta.dia_vencimento < diaHoje;
+      const checkBtn = isFuturo
+        ? `<div class="w-5 h-5 rounded-full border-2 border-slate-700 flex items-center justify-center shrink-0 opacity-40"><i data-lucide="clock" class="w-3 h-3 text-slate-500"></i></div>`
+        : `<button onclick="toggleStatusConta('${conta.id}','${conta.status}')" class="w-5 h-5 rounded-full border-2 ${conta.status==='pago'?'bg-emerald-500 border-emerald-500':'border-slate-600 hover:border-brand-500'} flex items-center justify-center shrink-0">${conta.status==='pago'?'<i data-lucide="check" class="w-3 h-3 text-white"></i>':''}</button>`;
+      const badge = isFuturo
+        ? `<span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">Projeção</span>`
+        : `<span class="text-xs px-2 py-0.5 rounded-full ${conta.status==='pago'?'bg-emerald-500/10 text-emerald-400':atrasada?'bg-red-500/10 text-red-400':'bg-amber-500/10 text-amber-400'}">${conta.status==='pago'?'Pago':atrasada?'Atrasada':'Pendente'}</span>`;
+
+      return `<div class="card-hover flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3 ${isFuturo?'opacity-80':''}">
+        ${checkBtn}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-sm font-medium ${(!isFuturo && conta.status==='pago')?'line-through text-slate-500':'text-white'}">${esc(conta.nome)}</span>
+            ${badge}
+            ${conta.categoria?`<span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">${esc(conta.categoria)}</span>`:''}
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Vencimento: dia ${conta.dia_vencimento}</p>
+        </div>
+        <span class="text-sm font-bold ${isFuturo?'text-slate-400':'text-white'}">R$ ${fmt(conta.valor)}</span>
+        <div class="flex gap-1.5 shrink-0">
+          <button onclick="openModal('conta_fixa','${conta.id}')" class="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button>
+          <button onclick="deleteItem('contas_fixas','${conta.id}')" class="px-2 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+        </div>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  // ============================================================
+  // RENDERER: GANHOS DO MÊS
+  // ============================================================
+  function renderGanhos(items, mesAtivo, mesAtual) {
+    const c = document.getElementById('list-ganhos');
+    const isFuturo = mesAtivo && mesAtual && mesAtivo > mesAtual;
+    let total=0, recorrentes=0, eventuais=0;
+    items.forEach(i => { total += i.valor||0; if(i.recorrente) recorrentes+=i.valor||0; else eventuais+=i.valor||0; });
+    document.getElementById('ganhos-total').textContent = 'R$ ' + fmt(total);
+    document.getElementById('ganhos-recorrentes').textContent = 'R$ ' + fmt(recorrentes);
+    document.getElementById('ganhos-eventuais').textContent = 'R$ ' + fmt(eventuais);
+
+    if (!items.length) {
+      const [y,m] = (mesAtivo||'').split('-');
+      const nomeMes = mesAtivo ? new Date(y,parseInt(m)-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) : 'este mês';
+      c.innerHTML = `<div class="text-center py-8 text-slate-500">
+        <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto mb-3"><i data-lucide="trending-up" class="w-6 h-6 opacity-30"></i></div>
+        <p class="text-sm">Nenhum ganho cadastrado para ${nomeMes}</p>
+        ${isFuturo ? '<p class="text-xs text-slate-600 mt-1">Adicione previsões de entrada para este mês</p>' : ''}
+      </div>`;
+      lucide.createIcons();
+      return;
+    }
+
+    c.innerHTML = items.map(g => `<div class="card-hover flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3 ${isFuturo?'opacity-85':''}">
+      <div class="w-9 h-9 rounded-xl ${isFuturo?'bg-brand-500/10':'bg-emerald-500/10'} flex items-center justify-center shrink-0">
+        <i data-lucide="${isFuturo?'calendar':'trending-up'}" class="w-4 h-4 ${isFuturo?'text-brand-400':'text-emerald-500'}"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-medium text-white">${esc(g.fonte)}</span>
+          <span class="text-sm font-bold ${isFuturo?'text-brand-400':'text-emerald-500'}">R$ ${fmt(g.valor)}</span>
+          ${g.recorrente?'<span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400">Recorrente</span>':''}
+          ${isFuturo?'<span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">Previsão</span>':''}
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">${fmtDate(g.data)}</p>
+      </div>
+      <div class="flex gap-1.5 shrink-0">
+        <button onclick="openModal('ganho','${g.id}')" class="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg">Editar</button>
+        <button onclick="deleteItem('ganhos_mes','${g.id}')" class="px-2 py-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+      </div>
+    </div>`).join('');
+    lucide.createIcons();
+  }
+
+  // ============================================================
+  // DASHBOARD
+  // ============================================================
+  async function updateDashboard() {
+    const [fin,car,fac,tar,ren,gan,con,comp] = await Promise.all([
+      sb.from('financiamentos').select('*'), sb.from('projetos_carreira').select('*'),
+      sb.from('faculdade').select('*'), sb.from('tarefas').select('*'),
+      sb.from('renda_extra').select('*'), sb.from('ganhos_mes').select('*'),
+      sb.from('contas_fixas').select('*'), sb.from('compras_cartao').select('*')
+    ]);
+    const fD=fin.data||[],cD=car.data||[],faD=fac.data||[],tD=tar.data||[],rD=ren.data||[],gD=gan.data||[],coD=con.data||[],cpD=comp.data||[];
+    const now=new Date(), ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+
+    // Stats existentes
+    const finAtivos=fD.filter(f=>f.status==='ativo');
+    document.getElementById('stat-financiamentos').textContent=finAtivos.length;
+    const rest=finAtivos.reduce((s,f)=>s+((f.valor_total||0)-((f.valor_parcela||0)*(f.parcelas_pagas||0))),0);
+    document.getElementById('stat-financiamentos-sub').textContent=`R$ ${fmt(rest)} restante`;
+
+    document.getElementById('stat-carreira').textContent=cD.filter(c=>c.status==='em_andamento').length;
+    document.getElementById('stat-carreira-sub').textContent=`${cD.filter(c=>c.status==='concluido').length} concluídos`;
+
+    document.getElementById('stat-faculdade').textContent=faD.filter(f=>f.status!=='concluido').length;
+    document.getElementById('stat-faculdade-sub').textContent=`${faD.filter(f=>f.status==='concluido').length} concluídas`;
+
+    const rMes=rD.filter(r=>{const d=new Date(r.data||r.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,r)=>s+(r.valor||0),0);
+    document.getElementById('stat-renda').textContent='R$ '+fmt(rMes);
+    document.getElementById('stat-renda-sub').textContent=`${rD.length} registros no total`;
+
+    // Novos stats financeiros
+    const ganhosMes = gD.filter(g=>{const d=new Date(g.data);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,g)=>s+(g.valor||0),0);
+    document.getElementById('stat-ganhos-mes').textContent='R$ '+fmt(ganhosMes);
+
+    const contasMes = coD.filter(c=>c.mes_referencia===ym).reduce((s,c)=>s+(c.valor||0),0);
+    document.getElementById('stat-contas-mes').textContent='R$ '+fmt(contasMes);
+
+    const cartaoMes = cpD.filter(c=>c.tipo==='parcelado'&&c.parcelas_pagas<c.parcelas_totais).reduce((s,c)=>s+(c.valor_parcela||0),0);
+    document.getElementById('stat-cartao-mes').textContent='R$ '+fmt(cartaoMes);
+
+    // Recent tasks
+    const allT=[...tD.map(t=>({titulo:t.titulo,prazo:t.prazo,status:t.status,tipo:'Tarefa'})),...faD.map(f=>({titulo:f.tarefa,prazo:f.prazo,status:f.status,tipo:f.materia}))].filter(t=>t.status!=='concluido').sort((a,b)=>{if(!a.prazo)return 1;if(!b.prazo)return -1;return new Date(a.prazo)-new Date(b.prazo);}).slice(0,5);
+    document.getElementById('recent-tasks').innerHTML=allT.length?allT.map(t=>`<div class="flex items-center gap-3 p-2.5 bg-slate-800/50 rounded-lg"><div class="w-1.5 h-1.5 rounded-full ${t.status==='em_andamento'?'bg-brand-500':'bg-amber-500'}"></div><span class="text-sm text-white flex-1">${esc(t.titulo)}</span><span class="text-xs text-slate-500">${esc(t.tipo)}</span>${t.prazo?`<span class="text-xs text-slate-400">${fmtDate(t.prazo)}</span>`:''}</div>`).join(''):'<p class="text-slate-500 text-sm">Tudo em dia! 🎉</p>';
+
+    renderRendaChart(rD);
+    renderTarefasChart(tD,faD);
+    renderProjecaoMeses(gD, coD, cpD);
+  }
+
+  function renderProjecaoMeses(gD, coD, cpD) {
+    const el = document.getElementById('projecao-meses');
+    if (!el) return;
+    const now = new Date();
+    // próximos 3 meses (excluindo atual)
+    const meses = [1,2,3].map(i => {
+      const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      return { key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), date: d };
+    });
+
+    // parcelas de cartão ativas: valor fixo por mês
+    const cartaoMensal = cpD.filter(c=>c.tipo==='parcelado'&&c.parcelas_pagas<c.parcelas_totais).reduce((s,c)=>s+(c.valor_parcela||0),0);
+
+    el.innerHTML = meses.map(({key, date}) => {
+      const nomeMes = date.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+      // ganhos previstos nesse mês
+      const ganhos = gD.filter(g => g.data && g.data.startsWith(key)).reduce((s,g)=>s+(g.valor||0),0);
+      // contas fixas cadastradas nesse mês
+      const contas = coD.filter(c => c.mes_referencia === key).reduce((s,c)=>s+(c.valor||0),0);
+      // saldo previsto
+      const saldo = ganhos - contas - cartaoMensal;
+      const saldoPos = saldo >= 0;
+
+      // barra proporcional
+      const maxVal = Math.max(ganhos, contas + cartaoMensal, 1);
+      const pctGanhos = Math.round((ganhos/maxVal)*100);
+      const pctSaidas = Math.round(((contas+cartaoMensal)/maxVal)*100);
+
+      return `<div class="p-3 bg-slate-800/50 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-white capitalize">${nomeMes}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400">Previsão</span>
+          </div>
+          <span class="text-sm font-bold ${saldoPos?'text-emerald-400':'text-red-400'}">${saldoPos?'+':''}R$ ${fmt(saldo)}</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-xs mb-2">
+          <div class="bg-slate-900 rounded-lg p-2">
+            <p class="text-slate-400">Entradas prev.</p>
+            <p class="font-semibold text-emerald-400 mt-0.5">R$ ${fmt(ganhos)}</p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-2">
+            <p class="text-slate-400">Contas fixas</p>
+            <p class="font-semibold text-red-400 mt-0.5">R$ ${fmt(contas)}</p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-2">
+            <p class="text-slate-400">Cartão (parc.)</p>
+            <p class="font-semibold text-amber-400 mt-0.5">R$ ${fmt(cartaoMensal)}</p>
+          </div>
+        </div>
+        <div class="space-y-1">
+          <div class="flex items-center gap-2"><span class="text-xs text-emerald-400 w-16 shrink-0">Entradas</span><div class="flex-1 bg-slate-800 rounded-full h-1.5"><div class="bg-emerald-500 h-1.5 rounded-full" style="width:${pctGanhos}%"></div></div></div>
+          <div class="flex items-center gap-2"><span class="text-xs text-red-400 w-16 shrink-0">Saídas</span><div class="flex-1 bg-slate-800 rounded-full h-1.5"><div class="bg-red-500 h-1.5 rounded-full" style="width:${pctSaidas}%"></div></div></div>
+        </div>
+        ${ganhos===0?'<p class="text-xs text-slate-500 mt-1">⚠️ Nenhuma entrada prevista — adicione em Ganhos do Mês</p>':''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderRendaChart(data) {
+    const now=new Date(),months={};
+    for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months[`${d.getFullYear()}-${d.getMonth()}`]=0;}
+    data.forEach(r=>{const d=new Date(r.data||r.created_at),k=`${d.getFullYear()}-${d.getMonth()}`;if(k in months)months[k]+=r.valor||0;});
+    const labels=Object.keys(months).map(k=>{const[y,m]=k.split('-');return new Date(y,m,1).toLocaleDateString('pt-BR',{month:'short'});});
+    const values=Object.values(months);
+    if(charts.renda)charts.renda.destroy();
+    charts.renda=new Chart(document.getElementById('chart-renda').getContext('2d'),{type:'bar',data:{labels,datasets:[{label:'Renda Extra',data:values,backgroundColor:'#10b981',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#1e293b'},ticks:{color:'#64748b',callback:v=>'R$'+v}},x:{grid:{display:false},ticks:{color:'#64748b'}}}}});
+  }
+
+  function renderTarefasChart(tD,fD) {
+    const all=[...tD,...fD];
+    const pend=all.filter(t=>t.status==='pendente').length,and=all.filter(t=>t.status==='em_andamento').length,conc=all.filter(t=>t.status==='concluido').length;
+    if(charts.tarefas)charts.tarefas.destroy();
+    charts.tarefas=new Chart(document.getElementById('chart-tarefas').getContext('2d'),{type:'doughnut',data:{labels:['Pendente','Em andamento','Concluído'],datasets:[{data:[pend,and,conc],backgroundColor:['#f59e0b','#6366f1','#10b981'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:12,boxWidth:12}}}}});
+  }
+
+  // ============================================================
+  // MODAL / FORM
+  // ============================================================
+  const formConfigs = {
+    financiamento:{table:'financiamentos',title:'Financiamento',fields:[
+      {name:'nome',label:'Nome',type:'text',placeholder:'Ex: Carro, Casa...',required:true},
+      {name:'valor_total',label:'Valor Total (R$)',type:'number',placeholder:'45000',required:true},
+      {name:'valor_parcela',label:'Valor da Parcela (R$)',type:'number',placeholder:'850',required:true},
+      {name:'parcelas_totais',label:'Parcelas Totais',type:'number',placeholder:'60',required:true},
+      {name:'parcelas_pagas',label:'Parcelas Pagas',type:'number',placeholder:'12',default:0},
+      {name:'status',label:'Status',type:'select',options:['ativo','quitado','atrasado'],default:'ativo'}
+    ]},
+    cartao:{table:'compras_cartao',title:'Compra no Cartão',fields:[
+      {name:'cartao',label:'Cartão',type:'text',placeholder:'Ex: Nubank, Itaú...',required:true},
+      {name:'descricao',label:'Descrição',type:'text',placeholder:'O que comprou?',required:true},
+      {name:'tipo',label:'Tipo',type:'select',options:['parcelado','avista'],default:'parcelado'},
+      {name:'valor_total',label:'Valor Total (R$)',type:'number',placeholder:'1200',step:'0.01',required:true},
+      {name:'valor_parcela',label:'Valor da Parcela (R$)',type:'number',placeholder:'100',step:'0.01'},
+      {name:'parcelas_totais',label:'Parcelas Totais',type:'number',placeholder:'12',default:1},
+      {name:'parcelas_pagas',label:'Parcelas Pagas',type:'number',placeholder:'0',default:0},
+      {name:'data_compra',label:'Data da Compra',type:'date',default:new Date().toISOString().split('T')[0]},
+      {name:'categoria',label:'Categoria',type:'text',placeholder:'Ex: Eletrônicos, Casa...'}
+    ]},
+    conta_fixa:{table:'contas_fixas',title:'Conta Fixa',fields:[
+      {name:'nome',label:'Nome da Conta',type:'text',placeholder:'Ex: Aluguel, Internet, Luz...',required:true},
+      {name:'valor',label:'Valor (R$)',type:'number',placeholder:'1200',step:'0.01',required:true},
+      {name:'dia_vencimento',label:'Dia do Vencimento',type:'number',placeholder:'10',default:1,min:1,max:31},
+      {name:'categoria',label:'Categoria',type:'text',placeholder:'Ex: Moradia, Transporte...'},
+      {name:'status',label:'Status',type:'select',options:['pendente','pago'],default:'pendente'},
+      {name:'mes_referencia',label:'Mês de Referência (YYYY-MM)',type:'text',placeholder:'2026-07',required:true}
+    ]},
+    ganho:{table:'ganhos_mes',title:'Ganho',fields:[
+      {name:'fonte',label:'Fonte',type:'text',placeholder:'Ex: Salário, Freelance...',required:true},
+      {name:'valor',label:'Valor (R$)',type:'number',placeholder:'3500',step:'0.01',required:true},
+      {name:'data',label:'Data',type:'date',default:new Date().toISOString().split('T')[0]},
+      {name:'recorrente',label:'É recorrente?',type:'select',options:['false','true'],default:'false'}
+    ]},
+    carreira:{table:'projetos_carreira',title:'Projeto de Carreira',fields:[
+      {name:'nome',label:'Nome do Projeto',type:'text',placeholder:'Ex: Aprender Python',required:true},
+      {name:'descricao',label:'Descrição',type:'textarea',placeholder:'Detalhes...'},
+      {name:'status',label:'Status',type:'select',options:['planejado','em_andamento','concluido','pausado'],default:'planejado'},
+      {name:'prioridade',label:'Prioridade',type:'select',options:['baixa','media','alta'],default:'media'},
+      {name:'prazo',label:'Prazo',type:'date'},
+      {name:'progresso',label:'Progresso (%)',type:'number',placeholder:'0',default:0,min:0,max:100}
+    ]},
+    faculdade:{table:'faculdade',title:'Tarefa da Faculdade',fields:[
+      {name:'materia',label:'Matéria',type:'text',placeholder:'Ex: Cálculo I',required:true},
+      {name:'tarefa',label:'Tarefa',type:'text',placeholder:'Ex: Trabalho final',required:true},
+      {name:'prazo',label:'Prazo de Entrega',type:'date'},
+      {name:'status',label:'Status',type:'select',options:['pendente','em_andamento','concluido'],default:'pendente'},
+      {name:'nota',label:'Nota (opcional)',type:'number',placeholder:'8.5',step:'0.1'}
+    ]},
+    tarefa:{table:'tarefas',title:'Nova Tarefa',fields:[
+      {name:'titulo',label:'Título',type:'text',placeholder:'O que precisa fazer?',required:true},
+      {name:'categoria',label:'Categoria',type:'text',placeholder:'Ex: Pessoal, Trabalho...'},
+      {name:'prioridade',label:'Prioridade',type:'select',options:['baixa','media','alta'],default:'media'},
+      {name:'status',label:'Status',type:'select',options:['pendente','em_andamento','concluido'],default:'pendente'},
+      {name:'prazo',label:'Prazo',type:'date'}
+    ]},
+    renda:{table:'renda_extra',title:'Renda Extra',fields:[
+      {name:'fonte',label:'Fonte',type:'text',placeholder:'Ex: Freelance, Venda...',required:true},
+      {name:'valor',label:'Valor (R$)',type:'number',placeholder:'500',step:'0.01',required:true},
+      {name:'data',label:'Data',type:'date',default:new Date().toISOString().split('T')[0]},
+      {name:'descricao',label:'Descrição',type:'textarea',placeholder:'Detalhes...'}
+    ]},
+    reforma:{table:'reformas_projetos',title:'Reforma / Projeto',fields:[
+      {name:'nome',label:'Nome',type:'text',placeholder:'Ex: Reforma do banheiro',required:true},
+      {name:'descricao',label:'Descrição',type:'textarea',placeholder:'Detalhes do projeto...'},
+      {name:'status',label:'Status',type:'select',options:['planejado','em_andamento','concluido','pausado'],default:'planejado'},
+      {name:'orcamento_total',label:'Orçamento Total (R$)',type:'number',placeholder:'5000',step:'0.01'},
+      {name:'gasto_atual',label:'Gasto Atual (R$)',type:'number',placeholder:'0',step:'0.01',default:0},
+      {name:'prazo',label:'Prazo',type:'date'}
+    ]}
+  };
+
+  let editingData = {};
+
+  async function openModal(type, id=null) {
+    const config=formConfigs[type];
+    // Auto-fill mes_referencia for contas fixas
+    if (type === 'conta_fixa' && !id) {
+      const now = new Date();
+      config.fields.find(f=>f.name==='mes_referencia').default = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    }
+    document.getElementById('modal-title').textContent=id?`Editar ${config.title}`:`Novo ${config.title}`;
+    document.getElementById('form-type').value=type;
+    document.getElementById('form-id').value=id||'';
+    editingData={};
+    if(id){const{data}=await sb.from(config.table).select('*').eq('id',id).single();if(data)editingData=data;}
+    document.getElementById('modal-fields').innerHTML=config.fields.map(f=>{
+      const val=editingData[f.name]??f.default??'';
+      if(f.type==='select') return `<div><label class="text-sm text-slate-400 mb-1 block">${f.label}</label><select name="${f.name}" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-brand-500">${f.options.map(o=>`<option value="${o}"${val==o?' selected':''}>${o==='true'?'Sim':o==='false'?'Não':o.replace('_',' ')}</option>`).join('')}</select></div>`;
+      if(f.type==='textarea') return `<div><label class="text-sm text-slate-400 mb-1 block">${f.label}</label><textarea name="${f.name}" rows="3" placeholder="${f.placeholder||''}" class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-brand-500">${esc(val)}</textarea></div>`;
+      return `<div><label class="text-sm text-slate-400 mb-1 block">${f.label}</label><input name="${f.name}" type="${f.type}" value="${esc(val)}" placeholder="${f.placeholder||''}" ${f.step?`step="${f.step}"`:''}${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.required?' required':''} class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"/></div>`;
+    }).join('');
+    document.getElementById('modal-overlay').classList.remove('hidden');
+    lucide.createIcons();
+  }
+
+  function closeModal(event) {
+    if(event&&event.target!==event.currentTarget)return;
+    document.getElementById('modal-overlay').classList.add('hidden');
+    editingData={};
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const type=document.getElementById('form-type').value;
+    const id=document.getElementById('form-id').value;
+    const config=formConfigs[type];
+    const fd=new FormData(event.target);
+    const data={};
+    config.fields.forEach(f=>{
+      const v=fd.get(f.name);
+      if(v!==''&&v!==null){
+        if(f.name==='recorrente') data[f.name]=v==='true';
+        else if(f.type==='number') data[f.name]=parseFloat(v);
+        else data[f.name]=v;
+      }
+    });
+    if(id){const{error}=await sb.from(config.table).update(data).eq('id',id);if(error){showToast('Erro: '+error.message,'error');return;}}
+    else{const{error}=await sb.from(config.table).insert(data);if(error){showToast('Erro: '+error.message,'error');return;}}
+    showToast('Salvo!','success');
+    closeModal();
+    loadSection(currentSection());
+    if (currentSection()==='dashboard'||currentSection()==='cartao'||currentSection()==='contas-fixas'||currentSection()==='ganhos') updateDashboard();
+  }
+
+  async function deleteItem(table, id) {
+    if(!confirm('Tem certeza?'))return;
+    const{error}=await sb.from(table).delete().eq('id',id);
+    if(error){showToast('Erro: '+error.message,'error');return;}
+    showToast('Excluído!','success');
+    loadSection(currentSection());
+    if (currentSection()==='dashboard'||currentSection()==='cartao'||currentSection()==='contas-fixas'||currentSection()==='ganhos') updateDashboard();
+  }
+
+  async function toggleStatus(table, id, status) {
+    const newStatus=status==='concluido'?'pendente':'concluido';
+    await sb.from(table).update({status:newStatus}).eq('id',id);
+    loadSection(currentSection());
+  }
+
+  async function toggleStatusConta(id, status) {
+    const newStatus = status==='pago'?'pendente':'pago';
+    await sb.from('contas_fixas').update({status:newStatus}).eq('id',id);
+    loadContasFixas();
+    updateDashboard();
+  }
+
+  // ============================================================
+  // UTILS
+  // ============================================================
+  function esc(str){if(str==null)return '';return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
+  function fmt(n){return(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});}
+  function fmtDate(s){if(!s)return '';return new Date(s+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
+  function fmtDate2(d){return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
+  function showToast(msg,type='info'){const colors={success:'bg-emerald-600',error:'bg-red-600',info:'bg-brand-600'};const t=document.createElement('div');t.className=`toast ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium`;t.textContent=msg;document.getElementById('toast-container').appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.3s';setTimeout(()=>t.remove(),300);},3000);}
+
+  init();
+</script>
+</body>
+</html>
